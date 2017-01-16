@@ -17,24 +17,25 @@ function initialize() {
 
 var input_index = 0;
 function addNewInput() {
-	var input = $("<input>", {"id": "input-" + input_index, "type": "text", "class": "form-control"});
+	var input = $("<input>", {"id": "input-" + input_index, "type": "text", "class": "person-search form-control alert"});
 
 	input.keyup(function(e) {
 		if(e.keyCode == 13) {
 			var text = $.trim($(this).val()).toLowerCase();
 			$(this).val(text);
 
-			if(text.length < 5 || !text.match(re)) {
-				$(this).addClass("alert alert-danger")
+			if(!text.match(re)) {
+				$(this).addClass("alert-danger")
 				$(this).select();
 				return; 
 			}
 
-			$(this).removeClass("alert-warning");
-			$(this).addClass("alert alert-success");
+			$(this).removeClass("alert-danger alert-success");
+			$(this).addClass("alert-warning");
+			$(this).addClass("loading");
+			$(this).attr("readonly", "readonly");
 
-			fetchPersonID(text);
-			addNewInput();
+			fetchPersonID(text, $(this));
 		}
 	});
 
@@ -42,60 +43,82 @@ function addNewInput() {
 	input.focus();
 }
 
-function fetchPersonID(person_name) {
+function fetchPersonID(person_name, input) {
 	$.ajax({
-		url: "http://imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
+		url: "//imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
 		crossDomain: true,
 		data: {
 			api_key: api_key
 		},
 		dataType: "jsonp",
 		success: function(data) {
-			fetchMoviesByID(data, person_name);
+			var person;
+			data.data.results.names.map(function(entry) {
+				if(entry.title.toLowerCase() == person_name) {
+					person = entry;
+					return;
+				}
+			});
+			input.removeClass("loading");
+			if(person) {
+				fillInputSuggestion(input, person);
+			} else {
+				input.after(createSuggestionsPopup(data.data.results.names, input));
+			}
 		}
 	});
 }
 
-function fetchMoviesByID(ret_data, person_name) {
-	var id;
-	if("data" in ret_data && "results" in ret_data.data && "names" in ret_data.data.results) {
-		ret_data.data.results.names.map(function(entry) {
-			if(entry.title.toLowerCase() == person_name) {
-				id = entry.id;
-				return;
-			}
+function createSuggestionsPopup(persons, input) {
+	var container = $("<div>", {"class": "suggestions"});
+	var list = $("<ul>", {"class": "list-group"});
+	persons.map(function(person) {
+		var li = $("<li>", {"class": "list-group-item person-suggestion"});
+		li.text(person.title);
+		li.data("person", person);
+		li.click(function() {
+			fillInputSuggestion(input, li.data("person"));
 		});
-		if(id)
-			console.log(person_name + " (" + id + ")");
-		else {
-			console.log(person_name + " not found!");
-			return;
-		}
-
-		$.ajax({
-			url: "http://imdb.wemakesites.net/api/" + encodeURIComponent(id),
-			crossDomain: true,
-			data: {
-				api_key: api_key
-			},
-			dataType: "jsonp",
-			success: function(data) {
-				updateFilmTotals(data.data.filmography, person_name);
-			}
-		});
-	}
+		list.append(li);
+	});
+	container.append(list);
+	return container;
 }
 
-function updateFilmTotals(filmography, name) {
+function fillInputSuggestion(input, person) {
+	input.next().remove();
+	input.val(person.title);
+	input.removeClass("alert-warning alert-danger");
+	input.addClass("alert-success");
+	input.attr("readonly", "");
+	fetchMoviesByID(person);
+	addNewInput();
+}
+
+function fetchMoviesByID(person) {
+	$.ajax({
+		url: "//imdb.wemakesites.net/api/" + encodeURIComponent(person.id),
+		crossDomain: true,
+		data: {
+			api_key: api_key
+		},
+		dataType: "jsonp",
+		success: function(data) {
+			updateFilmTotals(data.data.filmography, person);
+		}
+	});
+}
+
+function updateFilmTotals(filmography, person) {
 	var unique_credits = new Set(filmography.map(function(film) {
 		return film.title;
 	}));
 
 	unique_credits.forEach(function(film) {
 		if(!(film in films))
-			films[film] = [name];
+			films[film] = [person];
 		else
-			films[film].push(name);
+			films[film].push(person);
 	});
 
 	var sorted_films = Object.keys(films).sort(function(a, b) {

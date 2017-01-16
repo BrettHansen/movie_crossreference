@@ -1,3 +1,31 @@
 .container {
 	padding: 10%;
 }
+
+.loading {    
+    background-color: #ffffff;
+    background-image: url("loading.gif");
+    background-size: 16px 16px;
+    background-position: 98% 50%;
+    background-repeat: no-repeat;
+}
+
+.person-suggestion {
+	cursor: pointer;
+}
+
+.person-suggestion:hover {
+	background: #eeeeee;
+}
+
+.person-search {
+	margin: 0;
+}
+
+.form-group {
+	padding: 15px;
+	margin: 0;
+	background: #fefefe;
+	border: 1px solid #cccccc;
+	border-radius: 5px;
+}
