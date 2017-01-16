@@ -44,7 +44,7 @@ function addNewInput() {
 
 function fetchPersonID(person_name) {
 	$.ajax({
-		url: "//imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
+		url: "http://imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
 		crossDomain: true,
 		data: {
 			api_key: api_key
@@ -73,7 +73,7 @@ function fetchMoviesByID(ret_data, person_name) {
 		}
 
 		$.ajax({
-			url: "//imdb.wemakesites.net/api/" + encodeURIComponent(id),
+			url: "http://imdb.wemakesites.net/api/" + encodeURIComponent(id),
 			crossDomain: true,
 			data: {
 				api_key: api_key
@@ -87,12 +87,17 @@ function fetchMoviesByID(ret_data, person_name) {
 }
 
 function updateFilmTotals(filmography, name) {
-	filmography.map(function(film) {
-		if(!(film.title in films))
-			films[film.title] = [name];
+	var unique_credits = new Set(filmography.map(function(film) {
+		return film.title;
+	}));
+
+	unique_credits.forEach(function(film) {
+		if(!(film in films))
+			films[film] = [name];
 		else
-			films[film.title].push(name);
+			films[film].push(name);
 	});
+
 	var sorted_films = Object.keys(films).sort(function(a, b) {
 		return films[b].length - films[a].length;
 	});
