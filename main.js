@@ -2,7 +2,8 @@ var api_key = "cb0bfa0a-419c-44d4-8256-a1123df1ca51"
 var person_entry_container;
 var movie_results_container;
 var films;
-var re;
+var valid_name_re;
+var title_id_re;
 var people;
 
 function initialize() {
@@ -10,21 +11,25 @@ function initialize() {
 	movie_results_container = $("#movie-results-container");
 	films = new Object();
 
-	re = new RegExp("^[A-Za-z. -]+$");
+	valid_name_re = new RegExp("^[A-Za-z. -]+$");
+	title_id_re = /http:\/\/www.imdb.com\/title\/(\w+)\/\?ref.*/;
 
 	addNewInput();
 }
 
 var input_index = 0;
 function addNewInput() {
-	var input = $("<input>", {"id": "input-" + input_index, "type": "text", "class": "person-search form-control alert"});
+	var input = $("<input>", {	"id": "input-" + input_index,
+								"type": "text",
+								"class": "person-search form-control alert",
+								"placeholder": "Search for actors, directors, writers, etc."});
 
 	input.keyup(function(e) {
 		if(e.keyCode == 13) {
 			var text = $.trim($(this).val()).toLowerCase();
 			$(this).val(text);
 
-			if(!text.match(re)) {
+			if(!text.match(valid_name_re)) {
 				$(this).addClass("alert-danger")
 				$(this).select();
 				return; 
@@ -63,7 +68,11 @@ function fetchPersonID(person_name, input) {
 			if(person) {
 				fillInputSuggestion(input, person);
 			} else {
+				input.next().remove();
 				input.after(createSuggestionsPopup(data.data.results.names, input));
+				input.removeAttr("readonly");
+				input.focus();
+				input.select();
 			}
 		}
 	});
@@ -86,6 +95,7 @@ function createSuggestionsPopup(persons, input) {
 }
 
 function fillInputSuggestion(input, person) {
+	person.input = input;
 	input.next().remove();
 	input.val(person.title);
 	input.removeClass("alert-warning alert-danger");
@@ -111,25 +121,39 @@ function fetchMoviesByID(person) {
 
 function updateFilmTotals(filmography, person) {
 	var unique_credits = new Set(filmography.map(function(film) {
-		return film.title;
+		var id = title_id_re.exec(film.info)[1];
+		if(!(id in films))
+			films[id] = {"title": film.title, "members": []};
+		return id;
 	}));
 
-	unique_credits.forEach(function(film) {
-		if(!(film in films))
-			films[film] = [person];
-		else
-			films[film].push(person);
+	unique_credits.forEach(function(film_id) {
+		films[film_id].members.push(person);
 	});
 
-	var sorted_films = Object.keys(films).sort(function(a, b) {
-		return films[b].length - films[a].length;
+	var sorted_film_ids = Object.keys(films).sort(function(a, b) {
+		return films[b].members.length - films[a].members.length;
 	});
 	
-	console.log("\nShared Films:");
-	sorted_films.map(function(film) {
-		if(films[film].length == 1)
+	var header = $("<h3>");
+	header.text("Shared Films");
+	movie_results_container.empty();
+	movie_results_container.append(header);
+	sorted_film_ids.map(function(film_id) {
+		if(films[film_id].members.length == 1)
 			return;
-		console.log(film + ": " + films[film].length);
+		var item = $("<h5>", {"class": "film-list-item"});
+		item.text(films[film_id].title + ": " + films[film_id].members.length);
+		item.hover(function() {
+			films[film_id].members.map(function(person) {
+				person.input.addClass("input-highlight");
+			});
+		}, function() {
+			films[film_id].members.map(function(person) {
+				person.input.removeClass("input-highlight");
+			});
+		});
+		movie_results_container.append(item);
 	});
 }
 
