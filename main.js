@@ -50,7 +50,7 @@ function addNewInput() {
 
 function fetchPersonID(person_name, input) {
 	$.ajax({
-		url: "//imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
+		url: "http://imdb.wemakesites.net/api/search?q=" + encodeURIComponent(person_name),
 		crossDomain: true,
 		data: {
 			api_key: api_key
@@ -107,7 +107,7 @@ function fillInputSuggestion(input, person) {
 
 function fetchMoviesByID(person) {
 	$.ajax({
-		url: "//imdb.wemakesites.net/api/" + encodeURIComponent(person.id),
+		url: "http://imdb.wemakesites.net/api/" + encodeURIComponent(person.id),
 		crossDomain: true,
 		data: {
 			api_key: api_key
